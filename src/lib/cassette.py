@@ -14,22 +14,22 @@ class CASSETTE:
         #screen
         self.screen=Screen()
         #button
-        btn_pre=Button(14,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
-        btn_next=Button(15,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
-        btn_play=Button(16,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
-        btn_mode=Button(17,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
+        btn_pre=Button(15,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
+        btn_next=Button(14,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
+        btn_play=Button(5,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
+        btn_mode=Button(4,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
         btn_list=[btn_pre,btn_next,btn_play,btn_mode]
         for btn in btn_list:
             btn.connect(self.bt_callback)
             btn.setEnable(True)
         self.btcb=0
         #vs1053 
-        xcs = Pin(8, Pin.OUT, value=1)  
-        reset = Pin(7, Pin.OUT, value=1)  
-        xdcs = Pin(6, Pin.OUT, value=1)  
-        dreq = Pin(5, Pin.IN)  
-        sdcs = Pin(9, Pin.OUT, value=1)  
-        spi = SPI(1, sck=Pin(10), mosi=Pin(11), miso=Pin(12))
+        xcs = Pin(20, Pin.OUT, value=1)  
+        reset = Pin(21, Pin.OUT, value=1)  
+        xdcs = Pin(26, Pin.OUT, value=1)  
+        dreq = Pin(27, Pin.IN)  
+        sdcs = Pin(17, Pin.OUT, value=1)  
+        spi = SPI(0, sck=Pin(18), mosi=Pin(19), miso=Pin(16))
         self.player = VS1053(spi, reset, dreq, xdcs, xcs, sdcs, mp='/sd')
         #self.player.patch()   #Patch if you need
         #self.player.mode_set(SM_EARSPEAKER_HI | SM_EARSPEAKER_HI)  # You decide. 
@@ -174,9 +174,9 @@ class CASSETTE:
                 btcb=1+msg*10
             elif pin==14:  #button middle
                 btcb=2+msg*10
-            elif pin==17:  #button right
+            elif pin==5:  #button right
                 btcb=3+msg*10
-            elif pin==16:  #button boot
+            elif pin==4:  #button boot
                 btcb=4+msg*10
         self.btcb=btcb
     
@@ -378,13 +378,13 @@ class CASSETTE:
             elif self.btcb==21:
                 while self.btcb!=31:
                     self.screen.scroll_down()
-                    await asyncio.sleep_ms(12)
+                    await asyncio.sleep_ms(100)
             elif self.btcb==22:
                 while self.btcb!=32:
                     self.screen.scroll_up()
-                    await asyncio.sleep_ms(12)
+                    await asyncio.sleep_ms(100)
             self.btcb=0
-            await asyncio.sleep_ms(20)
+            await asyncio.sleep_ms(0)
         self.btcb=0
         if play:
             self.player._pause=False
