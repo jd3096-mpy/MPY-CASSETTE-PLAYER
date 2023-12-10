@@ -2,15 +2,21 @@ from machine import SPI, Pin
 from vs1053 import *
 import uasyncio as asyncio
 from lib.screen import Screen
+import lib.axp199 as axp
 import _thread,framebuf
 from button import Button
 import machine
 import gc,st7789,tft_config
 import ujson,struct
+import vga8x8 as font
 
 
 class CASSETTE:
     def __init__(self):
+        #power
+        self.power=axp.PMU()
+        self.power.write_byte(0x36, 0x4c)
+        print(self.power.getBattVoltage())
         #screen
         self.screen=Screen()
         #button
@@ -243,15 +249,19 @@ class CASSETTE:
             
     async def setting(self):
         print('setting')
+        self.screen.ani=False
         gray=st7789.color565(40,40,44)
+        blue=st7789.color565(184,212,254)
+        white=st7789.color565(222,222,222)
         choose=0
         self.btcb=0
-        self.screen.tft.fill_rect(0, 0, 240,75, gray)
+        self.screen.tft.fill(gray)
         self.screen.setting(choose,self.volume,self.bl,self.bass)
         i_choose=choose
         i_vol=self.volume
         i_bl=self.bl
         i_bass=self.bass
+        battery=9
         while 1:
             if self.btcb==23:
                 break
@@ -295,9 +305,22 @@ class CASSETTE:
                 self.screen.bl_set(self.bl)
                 self.player.response(bass_freq=150, bass_amp=self.bass)
             self.btcb=0
+            battery+=1
+            if battery==10:
+                print('show battery')
+                v=self.power.getBattVoltage()
+                p=self.power.getBattInpower()
+                c=self.power.getBattDischargeCurrent()
+                self.screen.tft.text(font, 'VOLT:'+str(v/1000), 50, 90,white,gray)
+                self.screen.tft.text(font, 'INPOWER:'+str(p/1000), 50, 105,white,gray)
+                self.screen.tft.text(font, 'CURRENT:'+str(c/1000), 50, 120,white,gray)
+                battery=0
             await asyncio.sleep_ms(20)
         print('setting done')
         self.show_cover()
+        self.screen.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
+        self.screen.ani=True
+        
             
     def get_cover(self):  
         with open(self.song_list[self.song_num], "rb") as mp3_file:
@@ -397,7 +420,6 @@ class CASSETTE:
         self.screen.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
            
                     
- #print(image_data[:20])
 
         
         
