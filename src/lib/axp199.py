@@ -25,14 +25,26 @@ AXP202_BAT_VOL_L4 = const(0x51)
 
 # Signal Capture
 AXP202_BATT_VOLTAGE_STEP = const(1.1)
-AXP202_BATT_DISCHARGE_CUR_STEP = const(0.5)
-AXP202_BATT_CHARGE_CUR_STEP = const(0.5)
+AXP202_BATT_DISCHARGE_CUR_STEP = const(1)
+AXP202_BATT_CHARGE_CUR_STEP = const(1)
 
 AXP202_BAT_POWERH8 = const(0x70)
 AXP202_BAT_POWERM8 = const(0x71)
 AXP202_BAT_POWERL8 = const(0x72)
 AXP202_BAT_AVERDISCHGCUR_H8 = const(0x7C)
 AXP202_BAT_AVERDISCHGCUR_L5 = const(0x7D)
+
+AXP202_INTEN1 = const(0x40)
+AXP202_INTEN2 = const(0x41)
+AXP202_INTEN3 = const(0x42)
+AXP202_INTEN4 = const(0x43)
+AXP202_INTEN5 = const(0x44)
+
+AXP192_INTSTS1 = const(0x44)
+AXP192_INTSTS2 = const(0x45)
+AXP192_INTSTS3 = const(0x46)
+AXP192_INTSTS4 = const(0x47)
+AXP192_INTSTS5 = const(0x4D)
 
 
 import gc
@@ -73,7 +85,13 @@ class PMU(object):
         print('* initializing pins')
         self.pin_sda = Pin(self.sda)
         self.pin_scl = Pin(self.scl)
-        self.pin_intr = Pin(self.intr, mode=Pin.IN)
+        self.pin_intr = Pin(2,Pin.IN,Pin.PULL_UP)
+        self.pin_intr.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING,hard=True)
+        
+    def irq_reg(self,t):
+        self.readIRQ()
+        print('irq_reg')
+        print(self.buffer)
 
     def write_byte(self, reg, val):
         self.bytebuf[0] = val
@@ -163,7 +181,8 @@ class PMU(object):
         m8 = self.read_byte(AXP202_BAT_POWERM8)
         l8 = self.read_byte(AXP202_BAT_POWERL8)
         data = (h8 << 16) | (m8 << 8) | l8
-        return 2 * data * 1.1 * 0.5 / 1000
+        #return 2 * data * 1.1 * 0.5 / 1000
+        return data * 1.1 * 0.5 / 1000
 
     def getBattVoltage(self):
         data = self.__get_h8_l4(AXP202_BAT_AVERVOL_H8, AXP202_BAT_AVERVOL_L4)
@@ -254,14 +273,10 @@ class PMU(object):
         pass
 
     def readIRQ(self):
-        if(self.chip == AXP202_CHIP_ID):
-            for i in range(5):
-                self.irqbuf[i] = self.read_byte(AXP202_INTSTS1 + i)
-        elif(self.chip == AXP192_CHIP_ID):
-            for i in range(4):
-                self.irqbuf[i] = self.read_byte(AXP192_INTSTS1 + i)
+        for i in range(4):
+            self.irqbuf[i] = self.read_byte(AXP192_INTSTS1 + i)
 
-            self.irqbuf[4] = self.read_byte(AXP192_INTSTS5)
+        self.irqbuf[4] = self.read_byte(AXP192_INTSTS5)
 
     def clearIRQ(self):
         if(self.chip == AXP202_CHIP_ID):

@@ -30,7 +30,7 @@ class Screen:
         self.ani_max=15
         self.reverse=False
         self.speed=20
-        self.bl=PWM(Pin(26))
+        self.bl=PWM(Pin(6))
         self.bl.freq(1000)
         self.bl.duty_u16(60000)
         ch_height=24
@@ -116,7 +116,8 @@ class Screen:
             self.tft.text(font, 'BASS', 182, 63,white,gray)
             
     def bl_set(self,b):  #0-7 brightness
-        bl_list=[4000,12000,20000,30000,40000,48000,56000,65534]
+        #bl_list=[4000,12000,20000,30000,40000,48000,56000,65534]
+        bl_list=[65534,56000,48000,40000,30000,20000,12000,4000]
         self.bl.duty_u16(bl_list[b])
         
     def error(self,text,extra=''):

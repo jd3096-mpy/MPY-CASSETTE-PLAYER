@@ -15,8 +15,11 @@ class CASSETTE:
     def __init__(self):
         #power
         self.power=axp.PMU()
-        self.power.write_byte(0x36, 0x4c)
+        self.power.write_byte(0x36, 0x4c)   #开机512ms 长按键1s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
+        self.power.write_byte(0x43, 0xc1)   #开关机irq使能
+        self.power.write_byte(0x42, 0x3b)   #开关机irq使能
         print(self.power.getBattVoltage())
+        #self.power.enableIRQ(0xFFFFFFFF)
         #screen
         self.screen=Screen()
         #button
@@ -311,9 +314,9 @@ class CASSETTE:
                 v=self.power.getBattVoltage()
                 p=self.power.getBattInpower()
                 c=self.power.getBattDischargeCurrent()
-                self.screen.tft.text(font, 'VOLT:'+str(v/1000), 50, 90,white,gray)
-                self.screen.tft.text(font, 'INPOWER:'+str(p/1000), 50, 105,white,gray)
-                self.screen.tft.text(font, 'CURRENT:'+str(c/1000), 50, 120,white,gray)
+                self.screen.tft.text(font, 'VOLT:'+str(v/1000)+'v', 50, 90,white,gray)
+                self.screen.tft.text(font, 'INPOWER:'+str(p)+'mw', 50, 105,white,gray)
+                self.screen.tft.text(font, 'CURRENT:'+str(c)+'ma', 50, 120,white,gray)
                 battery=0
             await asyncio.sleep_ms(20)
         print('setting done')
