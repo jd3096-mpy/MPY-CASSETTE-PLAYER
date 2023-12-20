@@ -112,7 +112,7 @@ class Screen:
             self.tft.text(font, 'BASS', 182, 63,white,gray)
             
     def bl_set(self,b):  #0-7 brightness
-        bl_list=[61000,56000,48000,40000,30000,20000,12000,1000]
+        bl_list=[65535,56000,48000,40000,30000,20000,12000,1000]
         self.bl.duty_u16(bl_list[b])
         
     def error(self,text,extra=''):
