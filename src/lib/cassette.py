@@ -15,11 +15,17 @@ class CASSETTE:
     def __init__(self):
         #power
         self.power=axp.PMU()
-        self.power.write_byte(0x36, 0x4c)   #开机512ms 长按键1s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
-        self.power.write_byte(0x43, 0xc1)   #开关机irq使能
-        self.power.write_byte(0x42, 0x3b)   #开关机irq使能
+        self.power_irq=self.power.pin_intr
+        self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
+        self.power.write_byte(0x36, 0x5c)   #开机512ms 长按键1.5s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
+        self.power.write_byte(0x32, 0x46)
+#         self.power.write_byte(0x43, 0xc1)   #开关机irq使能
+#         self.power.write_byte(0x42, 0x3b)   #开关机irq使能
+#         self.power.write_byte(0x82, 0x83)
+#         self.power.write_byte(0x83, 0x80)
+#         self.power.write_byte(0x84, 0x32)
+        self.power.clearIRQ()
         print(self.power.getBattVoltage())
-        #self.power.enableIRQ(0xFFFFFFFF)
         #screen
         self.screen=Screen()
         #button
@@ -43,6 +49,7 @@ class CASSETTE:
         #self.player.patch()   #Patch if you need
         #self.player.mode_set(SM_EARSPEAKER_HI | SM_EARSPEAKER_HI)  # You decide. 
         #self.player.response(bass_freq=100, bass_amp=10)  # This is extreme.
+        self.screen_on=True
         self.volume=4
         self.song_list=[]
         self.song_num=0
@@ -55,6 +62,32 @@ class CASSETTE:
         self.player.response(bass_freq=150, bass_amp=self.bass)
         self.cover=True
         self.search_music()
+        
+    def poweroff(self):
+        self.save()
+        self.screen.stop()
+        #self.player._pause=True
+        self.screen.tft.fill(0)
+        self.screen.tft.jpg('img/poweroff.jpg',0,0,st7789.SLOW)
+        time.sleep(2)
+        self.power.shutdown()
+
+            
+    def irq_reg(self,t):
+        print('axp irq')
+        cmd=self.power.read_byte(0x44 + 2)
+        print(cmd)
+        if cmd==1:
+            self.poweroff()
+            pass
+        elif cmd==2:
+            if self.screen_on:
+                self.screen.bl_set(0)
+                self.screen_on=False
+            else:
+                self.screen.bl_set(self.bl)
+                self.screen_on=True
+        self.power.clearIRQ()
         
     async def main(self):
         asyncio.create_task(self.screen.animation())
@@ -310,7 +343,6 @@ class CASSETTE:
             self.btcb=0
             battery+=1
             if battery==10:
-                print('show battery')
                 v=self.power.getBattVoltage()
                 p=self.power.getBattInpower()
                 c=self.power.getBattDischargeCurrent()
@@ -427,5 +459,6 @@ class CASSETTE:
         
         
    
+
 
 

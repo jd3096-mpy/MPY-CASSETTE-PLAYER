@@ -1,4 +1,19 @@
 from micropython import const
+
+# Signal Capture
+AXP202_BATT_VOLTAGE_STEP = 1.1
+AXP202_BATT_DISCHARGE_CUR_STEP = 0.5
+AXP202_BATT_CHARGE_CUR_STEP = 0.5
+AXP202_ACIN_VOLTAGE_STEP = 1.7
+AXP202_ACIN_CUR_STEP = 0.625
+AXP202_VBUS_VOLTAGE_STEP = 1.7
+AXP202_VBUS_CUR_STEP = 0.375
+AXP202_INTENAL_TEMP_STEP = 0.1
+AXP202_APS_VOLTAGE_STEP = 1.4
+AXP202_TS_PIN_OUT_STEP = 0.8
+AXP202_GPIO0_STEP = 0.5
+AXP202_GPIO1_STEP = 0.5
+
 # REG MAP
 AXP202_STATUS = const(0x00)
 AXP202_MODE_CHGSTATUS = const(0x01)
@@ -16,12 +31,17 @@ AXP20X_LED_BLINK_4HZ = const(2)
 AXP20X_LED_LOW_LEVEL = const(3)
 
 # axp 20 adc data register
+AXP202_ADC_EN1 = const(0x82)
+AXP202_ADC_EN2 = const(0x83)
 AXP202_BAT_AVERVOL_H8 = const(0x78)
 AXP202_BAT_AVERVOL_L4 = const(0x79)
 AXP202_BAT_AVERCHGCUR_H8 = const(0x7A)
 AXP202_BAT_AVERCHGCUR_L4 = const(0x7B)
 AXP202_BAT_VOL_H8 = const(0x50)
 AXP202_BAT_VOL_L4 = const(0x51)
+
+AXP202_VBUS_CUR_H8 = const(0x5C)
+AXP202_VBUS_CUR_L4 = const(0x5D)
 
 # Signal Capture
 AXP202_BATT_VOLTAGE_STEP = const(1.1)
@@ -44,13 +64,11 @@ AXP192_INTSTS1 = const(0x44)
 AXP192_INTSTS2 = const(0x45)
 AXP192_INTSTS3 = const(0x46)
 AXP192_INTSTS4 = const(0x47)
-AXP192_INTSTS5 = const(0x4D)
 
 
-import gc
 from machine import Pin, SoftI2C
-import micropython
 from ustruct import unpack
+import time
 
 default_pin_scl = 1
 default_pin_sda = 0
@@ -86,12 +104,6 @@ class PMU(object):
         self.pin_sda = Pin(self.sda)
         self.pin_scl = Pin(self.scl)
         self.pin_intr = Pin(2,Pin.IN,Pin.PULL_UP)
-        self.pin_intr.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING,hard=True)
-        
-    def irq_reg(self,t):
-        self.readIRQ()
-        print('irq_reg')
-        print(self.buffer)
 
     def write_byte(self, reg, val):
         self.bytebuf[0] = val
@@ -180,6 +192,7 @@ class PMU(object):
         h8 = self.read_byte(AXP202_BAT_POWERH8)
         m8 = self.read_byte(AXP202_BAT_POWERM8)
         l8 = self.read_byte(AXP202_BAT_POWERL8)
+        print(h8,m8,l8)
         data = (h8 << 16) | (m8 << 8) | l8
         #return 2 * data * 1.1 * 0.5 / 1000
         return data * 1.1 * 0.5 / 1000
@@ -276,17 +289,9 @@ class PMU(object):
         for i in range(4):
             self.irqbuf[i] = self.read_byte(AXP192_INTSTS1 + i)
 
-        self.irqbuf[4] = self.read_byte(AXP192_INTSTS5)
-
     def clearIRQ(self):
-        if(self.chip == AXP202_CHIP_ID):
-            for i in range(5):
-                self.write_byte(AXP202_INTSTS1 + i, 0xFF)
-                self.irqbuf[i] = 0
-        elif(self.chip == AXP192_CHIP_ID):
-            for i in range(4):
-                self.write_byte(AXP192_INTSTS1 + i, 0xFF)
-            self.write_byte(AXP192_INTSTS5, 0xFF)
+        for i in range(4):
+            self.write_byte(AXP192_INTSTS1 + i, 0xFF)
 
     def isVBUSPlug(self):
         data = self.read_byte(AXP202_STATUS)

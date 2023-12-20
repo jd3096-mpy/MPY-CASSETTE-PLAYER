@@ -4,7 +4,6 @@ import uasyncio as asyncio
 import gc
 import vga8x8 as font
 from machine import Pin,PWM
-#import dance as ff
 
 class Screen:
     
@@ -16,7 +15,6 @@ class Screen:
         self.tft.jpg('img/logo2.jpg',20,80,st7789.SLOW)
         time.sleep(1)
         self.fblist=[]
-        #load tape rotation animation
         print(gc.mem_free())
         for i in range(1,16):
             fb=self.tft.jpg_decode('img/'+str(i)+'.jpg')
@@ -78,8 +76,6 @@ class Screen:
         self.ch_fb.fill(0xffff)
         self.ch_fb.text(name,0,0,0x0)
         self.tft.blit_buffer(self.ch_buffer, 30, 36, 200,24)
-#         self.tft.fill_rect(15, 31, 215, 32, st7789.WHITE)
-#         self.tft.write(ff, name, 15, 31,st7789.BLACK,st7789.WHITE)
                 
     def stop(self):
         self.ani=False
@@ -87,12 +83,12 @@ class Screen:
         
     def fast_forward(self):
         self.ani=True
-        self.speed=5
+        self.speed=1
         self.reverse=False
         
     def fast_reverse(self):
         self.ani=True
-        self.speed=5
+        self.speed=1
         self.reverse=True
         
     def setting(self,choose,s1,s2,s3):
@@ -116,8 +112,7 @@ class Screen:
             self.tft.text(font, 'BASS', 182, 63,white,gray)
             
     def bl_set(self,b):  #0-7 brightness
-        #bl_list=[4000,12000,20000,30000,40000,48000,56000,65534]
-        bl_list=[65534,56000,48000,40000,30000,20000,12000,4000]
+        bl_list=[61000,56000,48000,40000,30000,20000,12000,1000]
         self.bl.duty_u16(bl_list[b])
         
     def error(self,text,extra=''):
