@@ -2,13 +2,13 @@
 import os
 import eyed3
 
-folder_path = ""
+folder_path=''
 
 cover_image_path = os.path.join(folder_path, "cover.jpg")
 with open(cover_image_path, "rb") as image_file:
     cover_image_data = image_file.read()
 
-for filename in os.listdir(folder_path):
+for filename in os.listdir():
     if filename.endswith(".mp3"):
         mp3_file_path = os.path.join(folder_path, filename)
         audiofile = eyed3.load(mp3_file_path)
