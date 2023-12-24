@@ -16,7 +16,7 @@ class Screen:
         time.sleep(1)
         self.fblist=[]
         print(gc.mem_free())
-        for i in range(1,16):
+        for i in range(1,13):
             fb=self.tft.jpg_decode('img/'+str(i)+'.jpg')
             fbuf = framebuf.FrameBuffer((fb[0]), 60, 60, framebuf.RGB565)
             self.fblist.append(fbuf)
@@ -25,9 +25,9 @@ class Screen:
         print(gc.mem_free())
         self.ani=False
         self.ani_num=1
-        self.ani_max=15
+        self.ani_max=12
         self.reverse=False
-        self.speed=20
+        self.speed=23
         self.bl=PWM(Pin(6))
         self.bl.freq(1000)
         self.bl.duty_u16(60000)
@@ -70,7 +70,7 @@ class Screen:
         
     def play(self):
         self.ani=True
-        self.speed=20
+        self.speed=23
         self.reverse=False
     def song_name(self,name):
         self.ch_fb.fill(0xffff)
@@ -83,12 +83,12 @@ class Screen:
         
     def fast_forward(self):
         self.ani=True
-        self.speed=1
+        self.speed=2
         self.reverse=False
         
     def fast_reverse(self):
         self.ani=True
-        self.speed=1
+        self.speed=5
         self.reverse=True
         
     def setting(self,choose,s1,s2,s3):

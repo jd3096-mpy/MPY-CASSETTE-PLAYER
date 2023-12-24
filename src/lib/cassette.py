@@ -44,7 +44,7 @@ class CASSETTE:
         xdcs = Pin(26, Pin.OUT, value=1)  
         dreq = Pin(27, Pin.IN)  
         sdcs = Pin(17, Pin.OUT, value=1)  
-        spi = SPI(0, sck=Pin(18), mosi=Pin(19), miso=Pin(16))
+        spi = SPI(0,baudrate=2000000,sck=Pin(18), mosi=Pin(19), miso=Pin(16))
         self.player = VS1053(spi, reset, dreq, xdcs, xcs, sdcs, mp='/sd')
         #self.player.patch()   #Patch if you need
         #self.player.mode_set(SM_EARSPEAKER_HI | SM_EARSPEAKER_HI)  # You decide. 
@@ -225,8 +225,6 @@ class CASSETTE:
     def search_music(self):
         try:
             songs = sorted([('/sd/'+x[0]) for x in os.ilistdir('sd') if x[1] != 0x4000 ])
-        except UnicodeError:
-            self.screen.error('SD卡含中文',extra='尝试使用转换工具')
         except OSError:
             self.screen.error('SD未插入或损坏')
         support_file = ('mp3', 'wav')
@@ -350,6 +348,7 @@ class CASSETTE:
                 self.screen.tft.text(font, 'INPOWER:'+str(p)+'mw', 50, 105,white,gray)
                 self.screen.tft.text(font, 'CURRENT:'+str(c)+'ma', 50, 120,white,gray)
                 battery=0
+                gc.collect()
             await asyncio.sleep_ms(20)
         print('setting done')
         self.show_cover()
