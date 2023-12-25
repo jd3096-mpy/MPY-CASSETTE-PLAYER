@@ -19,11 +19,8 @@ class CASSETTE:
         self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
         self.power.write_byte(0x36, 0x5c)   #开机512ms 长按键1.5s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
         self.power.write_byte(0x32, 0x46)
-#         self.power.write_byte(0x43, 0xc1)   #开关机irq使能
-#         self.power.write_byte(0x42, 0x3b)   #开关机irq使能
-#         self.power.write_byte(0x82, 0x83)
-#         self.power.write_byte(0x83, 0x80)
-#         self.power.write_byte(0x84, 0x32)
+        for i in range(1,7):
+            self.power.enableADC(1,i)
         self.power.clearIRQ()
         print(self.power.getBattVoltage())
         #screen
