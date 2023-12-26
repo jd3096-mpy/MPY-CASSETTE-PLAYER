@@ -67,6 +67,7 @@ class CASSETTE:
         self.screen.tft.fill(0)
         self.screen.tft.jpg('img/poweroff.jpg',0,0,st7789.SLOW)
         time.sleep(2)
+        os.umount('/sd')
         self.power.shutdown()
 
             
@@ -380,9 +381,18 @@ class CASSETTE:
                             with open("cover.jpg", "wb") as f:
                                 f.write(image_data)
                             gc.collect()
-                            image_data = mf.read(data_len-5000)
-                            with open("cover.jpg", "ab") as f:
-                                f.write(image_data)
+                            if data_len>10000:
+                                image_data = mf.read(5000)
+                                with open("cover.jpg", "ab") as f:
+                                    f.write(image_data)
+                                gc.collect()
+                                image_data = mf.read(data_len-10000)
+                                with open("cover.jpg", "ab") as f:
+                                    f.write(image_data)
+                            else:
+                                image_data = mf.read(data_len-5000)
+                                with open("cover.jpg", "ab") as f:
+                                    f.write(image_data)
                             self.screen.tft.jpg('cover.jpg',0,0,st7789.SLOW)
                             return header_len,data_len
                             
