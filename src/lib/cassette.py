@@ -377,16 +377,14 @@ class CASSETTE:
                     else:
                         data_len=int.from_bytes(apic_data[4:8], 'big')
                         header_len=10+apic_index+27
-                    if data_len<20000:
+                    if data_len<30000:
                         with open(self.song_list[self.song_num], "rb") as mf:
                             mf.seek(header_len)
-                            image_data = mf.read(5000)
+                            image_data = mf.read(data_len)
                             with open("cover.jpg", "wb") as f:
                                 f.write(image_data)
                             gc.collect()
-                            image_data = mf.read(data_len-5000)
-                            with open("cover.jpg", "ab") as f:
-                                f.write(image_data)
+                            
                             self.screen.tft.jpg('cover.jpg',0,0,st7789.SLOW)
                             return header_len,data_len
                             
