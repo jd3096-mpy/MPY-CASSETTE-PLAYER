@@ -19,8 +19,11 @@ class CASSETTE:
         self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
         self.power.write_byte(0x36, 0x5c)   #开机512ms 长按键1.5s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
         self.power.write_byte(0x32, 0x46)
-        for i in range(1,7):
-            self.power.enableADC(1,i)
+#         self.power.write_byte(0x43, 0xc1)   #开关机irq使能
+#         self.power.write_byte(0x42, 0x3b)   #开关机irq使能
+#         self.power.write_byte(0x82, 0x83)
+#         self.power.write_byte(0x83, 0x80)
+#         self.power.write_byte(0x84, 0x32)
         self.power.clearIRQ()
         print(self.power.getBattVoltage())
         #screen
@@ -66,8 +69,8 @@ class CASSETTE:
         #self.player._pause=True
         self.screen.tft.fill(0)
         self.screen.tft.jpg('img/poweroff.jpg',0,0,st7789.SLOW)
-        time.sleep(2)
         os.umount('/sd')
+        time.sleep(2)
         self.power.shutdown()
 
             
@@ -225,7 +228,7 @@ class CASSETTE:
             songs = sorted([('/sd/'+x[0]) for x in os.ilistdir('sd') if x[1] != 0x4000 ])
         except OSError:
             self.screen.error('SD未插入或损坏')
-        support_file = ('mp3', 'wav')
+        support_file = ('mp3')
         slist=[]
         for s in songs:
             if s[-3:] in support_file:
@@ -381,18 +384,9 @@ class CASSETTE:
                             with open("cover.jpg", "wb") as f:
                                 f.write(image_data)
                             gc.collect()
-                            if data_len>10000:
-                                image_data = mf.read(5000)
-                                with open("cover.jpg", "ab") as f:
-                                    f.write(image_data)
-                                gc.collect()
-                                image_data = mf.read(data_len-10000)
-                                with open("cover.jpg", "ab") as f:
-                                    f.write(image_data)
-                            else:
-                                image_data = mf.read(data_len-5000)
-                                with open("cover.jpg", "ab") as f:
-                                    f.write(image_data)
+                            image_data = mf.read(data_len-5000)
+                            with open("cover.jpg", "ab") as f:
+                                f.write(image_data)
                             self.screen.tft.jpg('cover.jpg',0,0,st7789.SLOW)
                             return header_len,data_len
                             

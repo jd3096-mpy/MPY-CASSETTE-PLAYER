@@ -4,6 +4,7 @@ import uasyncio as asyncio
 import gc
 import vga8x8 as font
 from machine import Pin,PWM
+import wheel
 
 class Screen:
     
@@ -15,13 +16,6 @@ class Screen:
         self.tft.jpg('img/logo2.jpg',20,80,st7789.SLOW)
         time.sleep(1)
         self.fblist=[]
-        print(gc.mem_free())
-        for i in range(1,13):
-            fb=self.tft.jpg_decode('img/'+str(i)+'.jpg')
-            fbuf = framebuf.FrameBuffer((fb[0]), 60, 60, framebuf.RGB565)
-            self.fblist.append(fbuf)
-            del fbuf
-        gc.collect()
         print(gc.mem_free())
         self.ani=False
         self.ani_num=1
@@ -41,8 +35,8 @@ class Screen:
         
         self.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
         self.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
-        self.tft.blit_buffer(self.fblist[0], 0, 74, 60, 60)
-        self.tft.blit_buffer(self.fblist[0], 180, 74, 60, 60)
+        self.tft.bitmap(wheel, 0, 75, 0)
+        self.tft.bitmap(wheel, 180, 75, 0)
         
         self.current_index=0
         self.items_per_page=5
@@ -62,15 +56,15 @@ class Screen:
                         self.ani_num=1
                     else:
                         self.ani_num+=1
-                self.tft.blit_buffer(self.fblist[self.ani_num-1], 0, 75, 60, 60)
-                self.tft.blit_buffer(self.fblist[self.ani_num-1], 180, 75, 60, 60)
+                self.tft.bitmap(wheel, 0, 75, self.ani_num-1)
+                self.tft.bitmap(wheel, 180, 75, self.ani_num-1)
                 await asyncio.sleep_ms(self.speed)
             else:
                 await asyncio.sleep_ms(10)
         
     def play(self):
         self.ani=True
-        self.speed=23
+        self.speed=13
         self.reverse=False
     def song_name(self,name):
         self.ch_fb.fill(0xffff)
@@ -83,12 +77,12 @@ class Screen:
         
     def fast_forward(self):
         self.ani=True
-        self.speed=2
+        self.speed=0
         self.reverse=False
         
     def fast_reverse(self):
         self.ani=True
-        self.speed=5
+        self.speed=0
         self.reverse=True
         
     def setting(self,choose,s1,s2,s3):
