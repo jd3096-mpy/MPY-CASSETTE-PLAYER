@@ -1,0 +1,1 @@
+./picotool save -a 1228.uf2
