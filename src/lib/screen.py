@@ -33,8 +33,8 @@ class Screen:
         self.ch_fb.font_set(0x13,0,1,0)
         self.ch_fb.fill(0xffff)
         
-        self.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
-        self.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
+        self.tft.jpg('img/fantasy.jpg',0,0)
+        self.tft.jpg('img/b100.jpg',60,75)
         self.tft.bitmap(wheel, 0, 75, 0)
         self.tft.bitmap(wheel, 180, 75, 0)
         
@@ -61,6 +61,17 @@ class Screen:
                 await asyncio.sleep_ms(self.speed)
             else:
                 await asyncio.sleep_ms(10)
+                
+    def show_battery(self,b):
+        if self.ani:
+            if b==4:
+                self.tft.jpg('img/b100.jpg',60,75)
+            elif b==3:
+                self.tft.jpg('img/b75.jpg',60,75)
+            elif b==2:
+                self.tft.jpg('img/b50.jpg',60,75)
+            elif b==1:
+                self.tft.jpg('img/b25.jpg',60,75)
         
     def play(self):
         self.ani=True
@@ -85,7 +96,7 @@ class Screen:
         self.speed=0
         self.reverse=True
         
-    def setting(self,choose,s1,s2,s3):
+    def setting(self,choose,s1,s2,s3,shuffle):
         gray=st7789.color565(40,40,44)
         blue=st7789.color565(184,212,254)
         white=st7789.color565(222,222,222)
@@ -104,9 +115,13 @@ class Screen:
             self.tft.text(font, 'BASS', 182, 63,blue,gray)
         else:
             self.tft.text(font, 'BASS', 182, 63,white,gray)
+        if shuffle:
+            self.tft.jpg('img/shuffle.jpg',180,90)
+        else:
+            self.tft.jpg('img/circle.jpg',180,90)
             
     def bl_set(self,b):  #0-7 brightness
-        bl_list=[65535,56000,48000,40000,30000,20000,12000,1000]
+        bl_list=[61000,56000,48000,40000,30000,20000,12000,1000]
         self.bl.duty_u16(bl_list[b])
         
     def error(self,text,extra=''):

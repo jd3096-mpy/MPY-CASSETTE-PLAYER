@@ -9,25 +9,26 @@ import machine
 import gc,st7789,tft_config
 import ujson,struct
 import vga8x8 as font
+import random
 
 
 class CASSETTE:
     def __init__(self):
+        self.battery=0
         #power
         self.power=axp.PMU()
         self.power_irq=self.power.pin_intr
         self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
         self.power.write_byte(0x36, 0x5c)   #开机512ms 长按键1.5s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
         self.power.write_byte(0x32, 0x46)
-#         self.power.write_byte(0x43, 0xc1)   #开关机irq使能
-#         self.power.write_byte(0x42, 0x3b)   #开关机irq使能
-#         self.power.write_byte(0x82, 0x83)
-#         self.power.write_byte(0x83, 0x80)
-#         self.power.write_byte(0x84, 0x32)
         self.power.clearIRQ()
-        print(self.power.getBattVoltage())
+        #enable adc!!! 
+        for i in range(1,7):
+            self.power.enableADC(1,i)
+        self.power.clearIRQ()
         #screen
         self.screen=Screen()
+        self.check_battery()
         #button
         btn_pre=Button(15,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
         btn_next=Button(14,pull=Pin.PULL_UP,trigger=Pin.IRQ_FALLING)
@@ -49,6 +50,7 @@ class CASSETTE:
         #self.player.patch()   #Patch if you need
         #self.player.mode_set(SM_EARSPEAKER_HI | SM_EARSPEAKER_HI)  # You decide. 
         #self.player.response(bass_freq=100, bass_amp=10)  # This is extreme.
+        self.shuffle=False
         self.screen_on=True
         self.volume=4
         self.song_list=[]
@@ -63,6 +65,25 @@ class CASSETTE:
         self.cover=True
         self.search_music()
         
+    def check_battery(self,b=False):
+        battery=self.power.getBattVoltage()
+        old=self.battery
+        if battery>3700:
+            self.battery=4
+        elif battery>3600 and battery<3680:
+            self.battery=3
+        elif battery>3500 and battery<3580:
+            self.battery=2
+        elif battery<3480:
+            self.battery=1
+        if self.battery!=old:
+            self.screen.show_battery(self.battery)
+        else:
+            if b:
+                self.screen.show_battery(self.battery)
+            
+        
+    
     def poweroff(self):
         self.save()
         self.screen.stop()
@@ -83,7 +104,7 @@ class CASSETTE:
             pass
         elif cmd==2:
             if self.screen_on:
-                self.screen.bl_set(0)
+                self.screen.bl.duty_u16(65535)
                 self.screen_on=False
             else:
                 self.screen.bl_set(self.bl)
@@ -98,16 +119,20 @@ class CASSETTE:
         while 1:
             await asyncio.sleep(1)
             print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
+            self.check_battery()
             if self.player.decode_time()!=0:
                 self.player._speed=int(self.player.seek_position/self.player.decode_time()/32/20)
             if self.player._end:
                 self.player._pause=False
                 await self.player.cancel()
                 self.player.soft_reset()
-                if self.song_num==len(self.song_list)-1:
-                    self.song_num=0
+                if not self.shuffle:
+                    if self.song_num==len(self.song_list)-1:
+                        self.song_num=0
+                    else:
+                        self.song_num+=1
                 else:
-                    self.song_num+=1
+                    self.song_num=random.randint(0,self.song_num-1)
                 self.player._end=False
                 asyncio.create_task(self.play(self.song_list[self.song_num]))
             
@@ -259,7 +284,7 @@ class CASSETTE:
         self.player.write_decode_time(time)
     
     def save(self):
-        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass}
+        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'shuffle':self.shuffle}
         s=ujson.dumps(setting_dict)
         print(s)
         with open('setting.txt', 'w') as f:
@@ -279,6 +304,7 @@ class CASSETTE:
             self.player.seek_position=setting_dict['position']
             self.bl=setting_dict['bl']
             self.bass=setting_dict['bass']
+            self.shuffle=setting_dict['shuffle']
         except:
             print('load error')
             
@@ -291,7 +317,7 @@ class CASSETTE:
         choose=0
         self.btcb=0
         self.screen.tft.fill(gray)
-        self.screen.setting(choose,self.volume,self.bl,self.bass)
+        self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
         i_choose=choose
         i_vol=self.volume
         i_bl=self.bl
@@ -330,32 +356,36 @@ class CASSETTE:
                 elif choose==2:
                     if self.bass>0:
                         self.bass-=1
+            if self.btcb==24:
+                print('shuffle')
+                self.shuffle=not self.shuffle
+                self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
+                print(self.shuffle)
             if choose!=i_choose or self.volume!=i_vol or self.bl!=i_bl or self.bass!=i_bass:
                 i_choose=choose
                 i_vol=self.volume
                 i_bl=self.bl
                 i_bass=self.bass
-                self.screen.setting(choose,self.volume,self.bl,self.bass)
+                self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
                 self.player.volume(self.volume)
                 self.screen.bl_set(self.bl)
                 self.player.response(bass_freq=150, bass_amp=self.bass)
             self.btcb=0
             battery+=1
             if battery==10:
-                v=self.power.getBattVoltage()
-                p=self.power.getBattInpower()
-                c=self.power.getBattDischargeCurrent()
-                self.screen.tft.text(font, 'VOLT:'+str(v/1000)+'v', 50, 90,white,gray)
-                self.screen.tft.text(font, 'INPOWER:'+str(p)+'mw', 50, 105,white,gray)
+                v=round(self.power.getBattVoltage()/1000,2)
+                p=round(self.power.getBattInpower(),2)
+                c=round(self.power.getBattDischargeCurrent(),2)
+                self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
+                self.screen.tft.text(font, 'INPOWER:'+str(p)+'mw', 48, 105,white,gray)
                 self.screen.tft.text(font, 'CURRENT:'+str(c)+'ma', 50, 120,white,gray)
                 battery=0
                 gc.collect()
             await asyncio.sleep_ms(20)
         print('setting done')
         self.show_cover()
-        self.screen.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
         self.screen.ani=True
-        
+        self.check_battery(True)
             
     def get_cover(self):  
         with open(self.song_list[self.song_num], "rb") as mp3_file:
@@ -377,7 +407,7 @@ class CASSETTE:
                     else:
                         data_len=int.from_bytes(apic_data[4:8], 'big')
                         header_len=10+apic_index+27
-                    if data_len<30000:
+                    if data_len<25000:
                         with open(self.song_list[self.song_num], "rb") as mf:
                             mf.seek(header_len)
                             image_data = mf.read(data_len)
@@ -450,7 +480,7 @@ class CASSETTE:
             asyncio.create_task(self.play(self.song_list[self.screen.current_index+self.screen.select_index]))        
         self.show_cover()
         self.screen.ani=True
-        self.screen.tft.jpg('../img/time.jpg',60,75,st7789.SLOW)
+        self.check_battery(True)
            
                     
 
