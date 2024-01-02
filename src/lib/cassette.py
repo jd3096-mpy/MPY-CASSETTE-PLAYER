@@ -132,7 +132,8 @@ class CASSETTE:
                     else:
                         self.song_num+=1
                 else:
-                    self.song_num=random.randint(0,self.song_num-1)
+                    song_max=len(self.song_list)-1
+                    self.song_num=random.randint(0,song_max)
                 self.player._end=False
                 asyncio.create_task(self.play(self.song_list[self.song_num]))
             
@@ -167,10 +168,14 @@ class CASSETTE:
                     self.player._pause=False
                     await self.player.cancel()
                     self.player.soft_reset()
-                    if self.song_num==len(self.song_list)-1:
-                        self.song_num=0
+                    if not self.shuffle:
+                        if self.song_num==len(self.song_list)-1:
+                            self.song_num=0
+                        else:
+                            self.song_num+=1
                     else:
-                        self.song_num+=1
+                        song_max=len(self.song_list)-1
+                        self.song_num=random.randint(0,song_max)
                     print(self.song_num,self.song_list[self.song_num])
                     asyncio.create_task(self.play(self.song_list[self.song_num]))
                 elif btcb==21:   #PREV SONG
@@ -178,10 +183,14 @@ class CASSETTE:
                     self.player._pause=False
                     await self.player.cancel()
                     self.player.soft_reset()
-                    if self.song_num==0:
-                        self.song_num=len(self.song_list)-1
+                    if not self.shuffle:
+                        if self.song_num==0:
+                            self.song_num=len(self.song_list)-1
+                        else:
+                            self.song_num-=1
                     else:
-                        self.song_num-=1
+                        song_max=len(self.song_list)-1
+                        self.song_num=random.randint(0,song_max)
                     print(self.song_num,self.song_list[self.song_num])
                     asyncio.create_task(self.play(self.song_list[self.song_num]))
                 elif btcb==11:   #VOLUME-
