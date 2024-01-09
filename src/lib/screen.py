@@ -21,7 +21,7 @@ class Screen:
         self.ani_num=1
         self.ani_max=15
         self.reverse=False
-        self.speed=10
+        self.speed=17
         self.bl=PWM(Pin(6))
         self.bl.freq(1000)
         self.bl.duty_u16(60000)
@@ -75,7 +75,7 @@ class Screen:
         
     def play(self):
         self.ani=True
-        self.speed=10
+        self.speed=17
         self.reverse=False
     def song_name(self,name):
         self.ch_fb.fill(0xffff)
