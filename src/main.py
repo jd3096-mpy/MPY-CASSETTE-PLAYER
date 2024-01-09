@@ -27,8 +27,4 @@ gc.enable()
 import uasyncio as asyncio
 from lib.cassette import CASSETTE
 tape=CASSETTE()
-
-# print(tape.shuffle)
-# import os
-# print(os.stat('sd'))
 asyncio.run(tape.main())

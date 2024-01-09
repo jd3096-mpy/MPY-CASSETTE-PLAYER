@@ -52,16 +52,17 @@ class CASSETTE:
         #self.player.response(bass_freq=100, bass_amp=10)  # This is extreme.
         self.shuffle=False
         self.screen_on=True
-        self.volume=4
+        self.volume=-27
         self.song_list=[]
         self.song_num=0
         self.effect=0
         self.bl=4
         self.bass=0
+        self.treble=0
         self.load()
         self.player.volume(self.volume)
         self.screen.bl_set(self.bl)
-        self.player.response(bass_freq=150, bass_amp=self.bass)
+        self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         self.cover=True
         self.search_music()
         
@@ -118,7 +119,7 @@ class CASSETTE:
         self.player.volume(self.volume) 
         while 1:
             await asyncio.sleep(1)
-            print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
+            #print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
             self.check_battery()
             if self.player.decode_time()!=0:
                 self.player._speed=int(self.player.seek_position/self.player.decode_time()/32/20)
@@ -142,13 +143,41 @@ class CASSETTE:
             btcb=self.btcb
             if btcb!=0:
                 print(btcb)
-                if btcb==1:  #REVERSE
-                    self.screen.fast_reverse()
-                    self.player._pause=True
-                    self.player._reverse=True
-                elif btcb==2:  #FORWARD
-                    self.screen.fast_forward()
-                    self.player.play_speed(4)
+#                 if btcb==1:  #REVERSE
+#                     self.screen.fast_reverse()
+#                     self.player._pause=True
+#                     self.player._reverse=True
+#                 elif btcb==2:  #FORWARD
+#                     self.screen.fast_forward()
+#                     self.player.play_speed(4)
+#                 elif btcb==11:   #VOLUME-
+#                     print('VOL-')
+#                     if self.volume<=0:
+#                         self.volume=0
+#                     else:
+#                         self.volume-=1
+#                     self.player.volume(self.volume) 
+#                 elif btcb==12:   #VOLUME+
+#                     print('VOL+')
+#                     if self.volume>=7:
+#                         self.volume=7
+#                     else:
+#                         self.volume+=1
+#                     self.player.volume(self.volume)
+                if btcb==1:  #VOLUME-
+                    print('VOL-')
+                    if self.volume<=-60:
+                        self.volume=-60
+                    else:
+                        self.volume-=3
+                    self.player.volume(self.volume) 
+                elif btcb==2:   #VOLUME+
+                    print('VOL+')
+                    if self.volume>=-1:
+                        self.volume=-1
+                    else:
+                        self.volume+=3
+                    self.player.volume(self.volume)
                 elif btcb==3:  #PLAY
                     self.screen.play()
                     self.player.play_speed(1)
@@ -193,20 +222,6 @@ class CASSETTE:
                         self.song_num=random.randint(0,song_max)
                     print(self.song_num,self.song_list[self.song_num])
                     asyncio.create_task(self.play(self.song_list[self.song_num]))
-                elif btcb==11:   #VOLUME-
-                    print('VOL-')
-                    if self.volume<=0:
-                        self.volume=0
-                    else:
-                        self.volume-=1
-                    self.player.volume(self.volume) 
-                elif btcb==12:   #VOLUME+
-                    print('VOL+')
-                    if self.volume>=7:
-                        self.volume=7
-                    else:
-                        self.volume+=1
-                    self.player.volume(self.volume)
                 elif btcb==23:   #SETTING
                     #self.mp3_jump_to(10)
                     await self.setting()
@@ -220,7 +235,7 @@ class CASSETTE:
         
     async def play(self,filename):
         self.player.volume(self.volume)
-        self.player.response(bass_freq=150, bass_amp=self.bass)
+        self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         re=self.get_cover()
         if re==None:
             self.screen.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
@@ -293,7 +308,7 @@ class CASSETTE:
         self.player.write_decode_time(time)
     
     def save(self):
-        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'shuffle':self.shuffle}
+        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'treble':self.treble,'shuffle':self.shuffle}
         s=ujson.dumps(setting_dict)
         print(s)
         with open('setting.txt', 'w') as f:
@@ -313,6 +328,7 @@ class CASSETTE:
             self.player.seek_position=setting_dict['position']
             self.bl=setting_dict['bl']
             self.bass=setting_dict['bass']
+            self.treble=setting_dict['treble']
             self.shuffle=setting_dict['shuffle']
         except:
             print('load error')
@@ -326,9 +342,9 @@ class CASSETTE:
         choose=0
         self.btcb=0
         self.screen.tft.fill(gray)
-        self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
+        self.screen.setting(choose,self.treble,self.bl,self.bass,self.shuffle)
         i_choose=choose
-        i_vol=self.volume
+        i_vol=self.treble
         i_bl=self.bl
         i_bass=self.bass
         battery=9
@@ -347,8 +363,8 @@ class CASSETTE:
                     choose+=1
             if self.btcb==3:
                 if choose==0:
-                    if self.volume<7:
-                        self.volume+=1
+                    if self.treble<7:
+                        self.treble+=1
                 elif choose==1:
                     if self.bl<7:
                         self.bl+=1
@@ -357,8 +373,8 @@ class CASSETTE:
                         self.bass+=1
             if self.btcb==4:
                 if choose==0:
-                    if self.volume>0:
-                        self.volume-=1
+                    if self.treble>0:
+                        self.treble-=1
                 elif choose==1:
                     if self.bl>0:
                         self.bl-=1
@@ -368,17 +384,16 @@ class CASSETTE:
             if self.btcb==24:
                 print('shuffle')
                 self.shuffle=not self.shuffle
-                self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
+                self.screen.setting(choose,self.treble,self.bl,self.bass,self.shuffle)
                 print(self.shuffle)
-            if choose!=i_choose or self.volume!=i_vol or self.bl!=i_bl or self.bass!=i_bass:
+            if choose!=i_choose or self.treble!=i_vol or self.bl!=i_bl or self.bass!=i_bass:
                 i_choose=choose
-                i_vol=self.volume
+                i_vol=self.treble
                 i_bl=self.bl
                 i_bass=self.bass
-                self.screen.setting(choose,self.volume,self.bl,self.bass,self.shuffle)
-                self.player.volume(self.volume)
+                self.screen.setting(choose,self.treble,self.bl,self.bass,self.shuffle)
                 self.screen.bl_set(self.bl)
-                self.player.response(bass_freq=150, bass_amp=self.bass)
+                self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
             self.btcb=0
             battery+=1
             if battery==10:

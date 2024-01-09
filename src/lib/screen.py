@@ -19,9 +19,9 @@ class Screen:
         print(gc.mem_free())
         self.ani=False
         self.ani_num=1
-        self.ani_max=12
+        self.ani_max=15
         self.reverse=False
-        self.speed=23
+        self.speed=10
         self.bl=PWM(Pin(6))
         self.bl.freq(1000)
         self.bl.duty_u16(60000)
@@ -46,7 +46,7 @@ class Screen:
     async def animation(self):
         while 1:
             if self.ani:
-                if self.reverse:
+                if not self.reverse:
                     if self.ani_num==1:
                         self.ani_num=self.ani_max
                     else:
@@ -60,7 +60,7 @@ class Screen:
                 self.tft.bitmap(wheel, 180, 75, self.ani_num-1)
                 await asyncio.sleep_ms(self.speed)
             else:
-                await asyncio.sleep_ms(10)
+                await asyncio.sleep_ms(1)
                 
     def show_battery(self,b):
         if self.ani:
@@ -75,7 +75,7 @@ class Screen:
         
     def play(self):
         self.ani=True
-        self.speed=13
+        self.speed=10
         self.reverse=False
     def song_name(self,name):
         self.ch_fb.fill(0xffff)
@@ -88,12 +88,12 @@ class Screen:
         
     def fast_forward(self):
         self.ani=True
-        self.speed=0
+        self.speed=2
         self.reverse=False
         
     def fast_reverse(self):
         self.ani=True
-        self.speed=0
+        self.speed=2
         self.reverse=True
         
     def setting(self,choose,s1,s2,s3,shuffle):
@@ -104,9 +104,9 @@ class Screen:
         self.tft.jpg('img/spin'+str(s2)+'.jpg',90,2,st7789.FAST)
         self.tft.jpg('img/spin'+str(s3)+'.jpg',165,2,st7789.FAST)
         if choose==0:
-            self.tft.text(font, 'VOLUME', 20, 63,blue,gray)
+            self.tft.text(font, 'TREBLE', 20, 63,blue,gray)
         else:
-            self.tft.text(font, 'VOLUME', 20, 63,white,gray)
+            self.tft.text(font, 'TREBLE', 20, 63,white,gray)
         if choose==1: 
             self.tft.text(font, 'BRIGHT', 97, 63,blue,gray)
         else:
