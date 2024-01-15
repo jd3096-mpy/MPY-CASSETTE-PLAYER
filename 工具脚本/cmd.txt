@@ -1,1 +1,5 @@
 ./picotool save -a 1228.uf2
+
+python uf2conv.py rotate.bin --base 0x10000000 --convert --output 8m-fast.uf2
+
+./picotool load rotate.bin -n -o 0x10800000
