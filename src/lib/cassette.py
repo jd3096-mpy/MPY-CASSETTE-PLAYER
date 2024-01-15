@@ -59,11 +59,11 @@ class CASSETTE:
         self.bl=4
         self.bass=0
         self.treble=0
+        self.cover=True
         self.load()
         self.player.volume(self.volume)
         self.screen.bl_set(self.bl)
         self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
-        self.cover=True
         self.search_music()
         
     def check_battery(self,b=False):
@@ -83,12 +83,9 @@ class CASSETTE:
             if b:
                 self.screen.show_battery(self.battery)
             
-        
-    
     def poweroff(self):
         self.save()
         self.screen.stop()
-        #self.player._pause=True
         self.screen.tft.fill(0)
         self.screen.tft.jpg('img/poweroff.jpg',0,0,st7789.SLOW)
         os.umount('/sd')
@@ -143,27 +140,6 @@ class CASSETTE:
             btcb=self.btcb
             if btcb!=0:
                 print(btcb)
-#                 if btcb==1:  #REVERSE
-#                     self.screen.fast_reverse()
-#                     self.player._pause=True
-#                     self.player._reverse=True
-#                 elif btcb==2:  #FORWARD
-#                     self.screen.fast_forward()
-#                     self.player.play_speed(4)
-#                 elif btcb==11:   #VOLUME-
-#                     print('VOL-')
-#                     if self.volume<=0:
-#                         self.volume=0
-#                     else:
-#                         self.volume-=1
-#                     self.player.volume(self.volume) 
-#                 elif btcb==12:   #VOLUME+
-#                     print('VOL+')
-#                     if self.volume>=7:
-#                         self.volume=7
-#                     else:
-#                         self.volume+=1
-#                     self.player.volume(self.volume)
                 if btcb==1:  #VOLUME-
                     print('VOL-')
                     if self.volume<=-60:
@@ -226,7 +202,9 @@ class CASSETTE:
                     #self.mp3_jump_to(10)
                     await self.setting()
                 elif btcb==13:   #COVER/SONGNAME
-                    self.show_cover(change=True)
+                    self.cover=not self.cover
+                    self.show_cover()
+                    self.save()
                 elif btcb==24:   #SELECT SONG
                     await self.select_song()
                 self.btcb=0
@@ -237,6 +215,7 @@ class CASSETTE:
         self.player.volume(self.volume)
         self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         re=self.get_cover()
+        self.show_cover()
         if re==None:
             self.screen.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
             if len(filename)<20:
@@ -308,7 +287,7 @@ class CASSETTE:
         self.player.write_decode_time(time)
     
     def save(self):
-        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'treble':self.treble,'shuffle':self.shuffle}
+        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'treble':self.treble,'shuffle':self.shuffle,'cover':self.cover}
         s=ujson.dumps(setting_dict)
         print(s)
         with open('setting.txt', 'w') as f:
@@ -330,6 +309,7 @@ class CASSETTE:
             self.bass=setting_dict['bass']
             self.treble=setting_dict['treble']
             self.shuffle=setting_dict['shuffle']
+            self.cover=setting_dict['cover']
         except:
             print('load error')
             
@@ -438,8 +418,7 @@ class CASSETTE:
                             with open("cover.jpg", "wb") as f:
                                 f.write(image_data)
                             gc.collect()
-                            
-                            self.screen.tft.jpg('cover.jpg',0,0,st7789.SLOW)
+
                             return header_len,data_len
                             
                 else:
@@ -448,14 +427,12 @@ class CASSETTE:
                 print("NO ID3")
         gc.collect()
     
-    def show_cover(self,change=False):
+    def show_cover(self):
         if self.cover:
             try:
                 self.screen.tft.jpg('cover.jpg',0,0,st7789.SLOW)
             except:
                 print("no cover")
-            if change:
-                self.cover=not self.cover
         else:
             filename=self.song_list[self.song_num]
             self.screen.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
@@ -463,8 +440,6 @@ class CASSETTE:
                 self.screen.song_name(filename[4:-4])
             else:
                 self.screen.song_name(filename[4:20])
-            if change:
-                self.cover=not self.cover
             
     async def select_song(self):
         play=False
