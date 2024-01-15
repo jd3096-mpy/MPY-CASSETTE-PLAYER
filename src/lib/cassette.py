@@ -469,7 +469,7 @@ class CASSETTE:
                     self.screen.scroll_up()
                     await asyncio.sleep_ms(100)
             self.btcb=0
-            await asyncio.sleep_ms(0)
+            await asyncio.sleep_ms(50)
         self.btcb=0
         if play:
             self.player._pause=False

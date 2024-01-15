@@ -32,6 +32,10 @@ class Screen:
         self.ch_fb.font_load("GB2312-24.fon")
         self.ch_fb.font_set(0x13,0,1,0)
         self.ch_fb.fill(0xffff)
+        self.menu_buffer = bytearray(160*24*2)
+        self.menu_fb=framebuf.FrameBuffer(self.menu_buffer, 160, 24, framebuf.RGB565SW)
+        self.menu_fb.font_load("GB2312-24.fon")
+        self.menu_fb.font_set(0x13,0,1,0)
         
         self.tft.jpg('img/fantasy.jpg',0,0)
         self.tft.jpg('img/b100.jpg',60,75)
@@ -143,23 +147,19 @@ class Screen:
     def fb_select(self,select,song_name,y):
         bg=st7789.color565(226,225,218)
         fg=st7789.color565(88,89,89)
-        ch_fb=framebuf.FrameBuffer(self.ch_buffer, 200, 24, framebuf.RGB565SW)
-        ch_fb.font_load("GB2312-24.fon")
-        ch_fb.font_set(0x13,0,1,0)
+
         if select:
-            ch_fb.fill(fg)
-            ch_fb.text(song_name,0,0,bg)
-            self.tft.blit_buffer(self.ch_buffer, 40,y,200,24)
-            self.tft.fill_rect(0, y, 40, 24, fg)
+            self.menu_fb.fill(fg)
+            self.menu_fb.text(song_name,0,0,bg)
+            self.tft.blit_buffer(self.menu_buffer, 40,y,160,24)
+            #self.tft.fill_rect(0, y, 40, 24, fg)
         else:
-            ch_fb.fill(bg)
-            ch_fb.text(song_name,0,0,fg)
-            self.tft.blit_buffer(self.ch_buffer, 40,y,200,24)
-            self.tft.fill_rect(0, y, 40, 24, bg)
+            self.menu_fb.fill(bg)
+            self.menu_fb.text(song_name,0,0,fg)
+            self.tft.blit_buffer(self.menu_buffer, 40,y,160,24)
+            #self.tft.fill_rect(0, y, 40, 24, bg)
             
     def song_select(self):
-        bg=st7789.color565(226,225,218)
-        fg=st7789.color565(88,89,89)
         menu_list=[]
         for i in range(self.current_index, min(self.current_index + self.items_per_page, len(self.menu_items))):
             if i == self.current_index:
