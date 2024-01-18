@@ -21,7 +21,7 @@ class Screen:
         self.ani_num=1
         self.ani_max=15
         self.reverse=False
-        self.speed=17
+        self.speed=22
         self.bl=PWM(Pin(6))
         self.bl.freq(1000)
         self.bl.duty_u16(60000)
@@ -32,13 +32,12 @@ class Screen:
         self.ch_fb.font_load("GB2312-24.fon")
         self.ch_fb.font_set(0x13,0,1,0)
         self.ch_fb.fill(0xffff)
-        self.menu_buffer = bytearray(160*24*2)
-        self.menu_fb=framebuf.FrameBuffer(self.menu_buffer, 160, 24, framebuf.RGB565SW)
+        self.menu_fb=framebuf.FrameBuffer(self.ch_buffer, 160, 24, framebuf.RGB565SW)
         self.menu_fb.font_load("GB2312-24.fon")
         self.menu_fb.font_set(0x13,0,1,0)
         
-        self.tft.jpg('img/fantasy.jpg',0,0)
-        self.tft.jpg('img/b100.jpg',60,75)
+        self.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
+        self.tft.jpg('img/b100.jpg',60,75,st7789.SLOW)
         self.tft.bitmap(wheel, 0, 75, 0)
         self.tft.bitmap(wheel, 180, 75, 0)
         
@@ -79,7 +78,7 @@ class Screen:
         
     def play(self):
         self.ani=True
-        self.speed=17
+        self.speed=22
         self.reverse=False
     def song_name(self,name):
         self.ch_fb.fill(0xffff)
@@ -151,12 +150,12 @@ class Screen:
         if select:
             self.menu_fb.fill(fg)
             self.menu_fb.text(song_name,0,0,bg)
-            self.tft.blit_buffer(self.menu_buffer, 40,y,160,24)
+            self.tft.blit_buffer(self.ch_buffer, 40,y,160,24)
             #self.tft.fill_rect(0, y, 40, 24, fg)
         else:
             self.menu_fb.fill(bg)
             self.menu_fb.text(song_name,0,0,fg)
-            self.tft.blit_buffer(self.menu_buffer, 40,y,160,24)
+            self.tft.blit_buffer(self.ch_buffer, 40,y,160,24)
             #self.tft.fill_rect(0, y, 40, 24, bg)
             
     def song_select(self):

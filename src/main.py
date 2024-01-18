@@ -26,5 +26,6 @@ import gc
 gc.enable()
 import uasyncio as asyncio
 from lib.cassette import CASSETTE
+gc.collect()
 tape=CASSETTE()
 asyncio.run(tape.main())

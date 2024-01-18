@@ -2,7 +2,6 @@ from machine import SPI, Pin
 from vs1053 import *
 import uasyncio as asyncio
 from lib.screen import Screen
-import lib.axp199 as axp
 import _thread,framebuf
 from button import Button
 import machine
@@ -10,22 +9,30 @@ import gc,st7789,tft_config
 import ujson,struct
 import vga8x8 as font
 import random
+from AXP2101 import *
+gc.collect()
 
 
 class CASSETTE:
     def __init__(self):
         self.battery=0
         #power
-        self.power=axp.PMU()
-        self.power_irq=self.power.pin_intr
+        from machine import Pin, SoftI2C
+        SDA = 0
+        SCL = 1
+        IRQ = 2
+        I2CBUS = SoftI2C(scl=Pin(SCL), sda=Pin(SDA))
+        self.power=AXP2101(I2CBUS, addr=0x34)
+        self.power_irq=Pin(2,Pin.IN,Pin.PULL_UP)
         self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
-        self.power.write_byte(0x36, 0x5c)   #开机512ms 长按键1.5s 按键大于关机on 电源启动后pwrok信号延迟64ms 关机4s
-        self.power.write_byte(0x32, 0x46)
-        self.power.clearIRQ()
-        #enable adc!!! 
-        for i in range(1,7):
-            self.power.enableADC(1,i)
-        self.power.clearIRQ()
+        self.power.clearIrqStatus()
+        self.power.enableIRQ(
+        self.power.XPOWERS_AXP2101_PKEY_SHORT_IRQ | self.power.XPOWERS_AXP2101_PKEY_LONG_IRQ |  # POWER KEY
+        self.power.XPOWERS_AXP2101_BAT_CHG_DONE_IRQ | self.power.XPOWERS_AXP2101_BAT_CHG_START_IRQ  # CHARGE
+)
+        self.power.enableGeneralAdcChannel()
+        self.power.enableTemperatureMeasure()
+        self.power.enableBattVoltageMeasure()
         #screen
         self.screen=Screen()
         self.check_battery()
@@ -88,26 +95,26 @@ class CASSETTE:
         self.screen.stop()
         self.screen.tft.fill(0)
         self.screen.tft.jpg('img/poweroff.jpg',0,0,st7789.SLOW)
-        os.umount('/sd')
+        #os.umount('/sd')
         time.sleep(2)
         self.power.shutdown()
 
             
     def irq_reg(self,t):
         print('axp irq')
-        cmd=self.power.read_byte(0x44 + 2)
-        print(cmd)
-        if cmd==1:
+        status = self.power.getIrqStatus()
+        print(status)
+        if self.power.isPekeyLongPressIrq():
             self.poweroff()
             pass
-        elif cmd==2:
+        elif self.power.isPekeyShortPressIrq():
             if self.screen_on:
                 self.screen.bl.duty_u16(65535)
                 self.screen_on=False
             else:
                 self.screen.bl_set(self.bl)
                 self.screen_on=True
-        self.power.clearIRQ()
+        self.power.clearIrqStatus()
         
     async def main(self):
         asyncio.create_task(self.screen.animation())
@@ -116,7 +123,7 @@ class CASSETTE:
         self.player.volume(self.volume) 
         while 1:
             await asyncio.sleep(1)
-            #print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
+            print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
             self.check_battery()
             if self.player.decode_time()!=0:
                 self.player._speed=int(self.player.seek_position/self.player.decode_time()/32/20)
@@ -378,11 +385,11 @@ class CASSETTE:
             battery+=1
             if battery==10:
                 v=round(self.power.getBattVoltage()/1000,2)
-                p=round(self.power.getBattInpower(),2)
-                c=round(self.power.getBattDischargeCurrent(),2)
+                p=round(self.power.getBatteryPercent(),2)
+                t=round(self.power.getTemperature(),2)
                 self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
-                self.screen.tft.text(font, 'INPOWER:'+str(p)+'mw', 48, 105,white,gray)
-                self.screen.tft.text(font, 'CURRENT:'+str(c)+'ma', 50, 120,white,gray)
+                self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 48, 105,white,gray)
+                self.screen.tft.text(font, 'TEMP:'+str(t)+'C', 50, 120,white,gray)
                 battery=0
                 gc.collect()
             await asyncio.sleep_ms(20)
