@@ -74,7 +74,7 @@ class CASSETTE:
         self.search_music()
         
     def check_battery(self,b=False):
-        battery=self.power.getBattVoltage()
+        battery=self.power.getSystemVoltage()
         old=self.battery
         if battery>3700:
             self.battery=4
@@ -384,12 +384,10 @@ class CASSETTE:
             self.btcb=0
             battery+=1
             if battery==10:
-                v=round(self.power.getBattVoltage()/1000,2)
+                v=round(self.power.getSystemVoltage()/1000,2)
                 p=round(self.power.getBatteryPercent(),2)
-                t=round(self.power.getTemperature(),2)
                 self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
                 self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 48, 105,white,gray)
-                self.screen.tft.text(font, 'TEMP:'+str(t)+'C', 50, 120,white,gray)
                 battery=0
                 gc.collect()
             await asyncio.sleep_ms(20)

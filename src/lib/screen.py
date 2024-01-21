@@ -32,7 +32,7 @@ class Screen:
         self.ch_fb.font_load("GB2312-24.fon")
         self.ch_fb.font_set(0x13,0,1,0)
         self.ch_fb.fill(0xffff)
-        self.menu_fb=framebuf.FrameBuffer(self.ch_buffer, 160, 24, framebuf.RGB565SW)
+        self.menu_fb=framebuf.FrameBuffer(self.ch_buffer, 200, 24, framebuf.RGB565SW)
         self.menu_fb.font_load("GB2312-24.fon")
         self.menu_fb.font_set(0x13,0,1,0)
         
@@ -150,12 +150,12 @@ class Screen:
         if select:
             self.menu_fb.fill(fg)
             self.menu_fb.text(song_name,0,0,bg)
-            self.tft.blit_buffer(self.ch_buffer, 40,y,160,24)
+            self.tft.blit_buffer(self.ch_buffer, 20,y,200,24)
             #self.tft.fill_rect(0, y, 40, 24, fg)
         else:
             self.menu_fb.fill(bg)
             self.menu_fb.text(song_name,0,0,fg)
-            self.tft.blit_buffer(self.ch_buffer, 40,y,160,24)
+            self.tft.blit_buffer(self.ch_buffer, 20,y,200,24)
             #self.tft.fill_rect(0, y, 40, 24, bg)
             
     def song_select(self):
