@@ -30,9 +30,12 @@ class CASSETTE:
         self.power.XPOWERS_AXP2101_PKEY_SHORT_IRQ | self.power.XPOWERS_AXP2101_PKEY_LONG_IRQ |  # POWER KEY
         self.power.XPOWERS_AXP2101_BAT_CHG_DONE_IRQ | self.power.XPOWERS_AXP2101_BAT_CHG_START_IRQ  # CHARGE
 )
+        self.power.enableGauge()
         self.power.enableGeneralAdcChannel()
-        self.power.enableTemperatureMeasure()
         self.power.enableBattVoltageMeasure()
+        self.power.fuelGaugeControl(False,True)
+#         dd=self.power.getBatteryParameter()
+#         print(dd)
         #screen
         self.screen=Screen()
         self.check_battery()
@@ -66,12 +69,21 @@ class CASSETTE:
         self.bl=4
         self.bass=0
         self.treble=0
+        self.free_space=0
         self.cover=True
         self.load()
         self.player.volume(self.volume)
         self.screen.bl_set(self.bl)
         self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         self.search_music()
+        
+    def diskfree(self,d='/sd'):
+        os.sync()
+        try:
+            a = os.statvfs(d)
+            return a[0]*a[3]
+        except:
+            return 0
         
     def check_battery(self,b=False):
         battery=self.power.getSystemVoltage()
@@ -258,18 +270,27 @@ class CASSETTE:
                 btcb=4+msg*10
         self.btcb=btcb
     
+    def list_mp3_files(self,directory):
+        support_files='.mp3'
+        mp3_files = []
+        for item in os.listdir(directory):
+            item_path = directory+'/'+item
+            if os.stat(item_path)[0] & 0o100000 != 0:
+                if item.lower().endswith(support_files):
+                    mp3_files.append(item_path)
+            elif os.stat(item_path)[0] & 0o040000 != 0:
+                mp3_files.extend(self.list_mp3_files(item_path))
+        
+        return mp3_files
+    
     def search_music(self):
         try:
-            songs = sorted([('/sd/'+x[0]) for x in os.ilistdir('sd') if x[1] != 0x4000 ])
+            songs = self.list_mp3_files('/sd')
         except OSError:
             self.screen.error('SD未插入或损坏')
-        support_file = ('mp3')
-        slist=[]
         for s in songs:
-            if s[-3:] in support_file:
-                slist.append(s)
-        print(slist)
-        self.song_list=slist
+            print(s)
+        self.song_list=songs
     
     def mp3_header(self,filename):
         head=''
@@ -294,7 +315,7 @@ class CASSETTE:
         self.player.write_decode_time(time)
     
     def save(self):
-        setting_dict={'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'treble':self.treble,'shuffle':self.shuffle,'cover':self.cover}
+        setting_dict={'diskfree':self.free_space,'volume':self.volume,'position':self.player.seek_position,'number':self.song_num,'bl':self.bl,'bass':self.bass,'treble':self.treble,'shuffle':self.shuffle,'cover':self.cover}
         s=ujson.dumps(setting_dict)
         print(s)
         with open('setting.txt', 'w') as f:
@@ -317,8 +338,18 @@ class CASSETTE:
             self.treble=setting_dict['treble']
             self.shuffle=setting_dict['shuffle']
             self.cover=setting_dict['cover']
+            self.free_space=setting_dict['diskfree']
         except:
             print('load error')
+        free_space=self.diskfree()
+        if free_space==self.free_space:
+            print('file not change')
+        else:
+            print('file change')
+            self.free_space=free_space
+            self.song_num=0
+            self.player.seek_position=0
+            self.save()
             
     async def setting(self):
         print('setting')
@@ -386,8 +417,10 @@ class CASSETTE:
             if battery==10:
                 v=round(self.power.getSystemVoltage()/1000,2)
                 p=round(self.power.getBatteryPercent(),2)
+                vol=int(self.volume/3)+20
                 self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
                 self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 48, 105,white,gray)
+                self.screen.tft.text(font, 'VOLUME:'+str(vol), 48, 120,white,gray)
                 battery=0
                 gc.collect()
             await asyncio.sleep_ms(20)
