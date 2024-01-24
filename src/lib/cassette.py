@@ -462,13 +462,24 @@ class CASSETTE:
                 v=round(self.power.getSystemVoltage()/1000,2)
                 p=self.power.getBatteryPercent()
                 vol=int(self.volume/3)+20
-                vol=self.power.getBattVoltage()
-                self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
-                self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 48, 105,white,gray)
-                self.screen.tft.text(font, 'VOLUME:'+str(vol), 48, 120,white,gray)
+                #vol=self.power.getBattVoltage()
+                self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 70, 85,white,gray)
+                self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 70, 100,white,gray)
+                self.screen.tft.text(font, 'VOLUME:'+str(vol), 70, 115,white,gray)
                 battery=0
+                c=self.power.isCharging()
+                d=self.power.isDischarge()
+                if c==False and d==False:
+                    self.screen.tft.jpg('img/bat_full.jpg',20,90,st7789.FAST)
+                elif c==True:
+                    self.screen.tft.jpg('img/bat_charge.jpg',20,90,st7789.FAST)
+                elif d==True:
+                    if v>3.3:
+                        self.screen.tft.jpg('img/bat_use.jpg',20,90,st7789.FAST)
+                    else:
+                        self.screen.tft.jpg('img/bat_low.jpg',20,90,st7789.FAST)
                 gc.collect()
-            await asyncio.sleep_ms(20)
+            await asyncio.sleep_ms(100)
         print('setting done')
         self.show_cover()
         self.screen.ani=True
@@ -533,17 +544,16 @@ class CASSETTE:
         self.screen.menu_items=[item[4:] for item in self.song_list]
         bg=st7789.color565(226,225,218)
         self.screen.tft.fill(bg)
+        self.screen.tft.jpg('img/folder.jpg',50,5,st7789.FAST)
         self.screen.show_menu(menu.display())
         self.btcb=0
         while 1:
             if self.btcb==4:
-                menu.back()
-                menu.display()
-                re=menu.display()
+                re=menu.back()
                 if re==0:
                     break
                 else:
-                    self.screen.show_menu(re)
+                    self.screen.show_menu(menu.display())
             elif self.btcb==1:
                 menu.up()
                 menu.display()
@@ -556,8 +566,9 @@ class CASSETTE:
                 playsong=menu.ok()
                 print(playsong)
                 if playsong!=None:
-                    play=True
-                    break 
+                    if playsong[-4:]=='.mp3':
+                        play=True
+                        break 
                 else:
                     self.screen.show_menu(menu.display())
             elif self.btcb==21:

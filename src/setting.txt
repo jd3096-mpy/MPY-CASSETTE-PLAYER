@@ -1,1 +1,0 @@
-{"cover": false, "volume": -30, "position": 2000926, "treble": 4, "shuffle": false, "bl": 1, "bass": 2, "diskfree": 31131303936, "number": 2}

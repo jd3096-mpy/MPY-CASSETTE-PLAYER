@@ -35,6 +35,10 @@ class Screen:
         self.menu_fb=framebuf.FrameBuffer(self.ch_buffer, 200, 24, framebuf.RGB565SW)
         self.menu_fb.font_load("GB2312-24.fon")
         self.menu_fb.font_set(0x13,0,1,0)
+        self.title_buffer = bytearray(160*24*2)
+        self.title_fb=framebuf.FrameBuffer(self.title_buffer, 160, 24, framebuf.RGB565SW)
+        self.title_fb.font_load("GB2312-24.fon")
+        self.title_fb.font_set(0x13,0,1,0)
         
         self.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
         self.tft.jpg('img/b100.jpg',60,75,st7789.SLOW)
@@ -157,13 +161,21 @@ class Screen:
             self.menu_fb.text(song_name,0,0,fg)
             self.tft.blit_buffer(self.ch_buffer, 20,y,200,24)
             #self.tft.fill_rect(0, y, 40, 24, bg)
+    
+    def title_menu(self,title):
+        pure=title.split('/')[-1]
+        bg=st7789.color565(226,225,218)
+        fg=st7789.color565(88,89,89)
+        self.title_fb.fill(bg)
+        self.title_fb.text(pure,0,0,fg)
+        self.tft.blit_buffer(self.title_buffer,80,5,160,24)
             
     def show_menu(self,menu_data):
         menu_list=menu_data[0]
         cursor=menu_data[1]
         title=menu_data[2]
         print(menu_list)
-        self.fb_select(False,title,5)
+        self.title_menu(title)
         self.fb_select(cursor==0,menu_list[0],30)
         self.fb_select(cursor==1,menu_list[1],55)
         self.fb_select(cursor==2,menu_list[2],80)
