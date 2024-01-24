@@ -1,7 +1,7 @@
 from machine import SPI, Pin
 from vs1053 import *
 import uasyncio as asyncio
-from lib.screen import Screen
+from lib.screen import *
 import _thread,framebuf
 from button import Button
 import machine
@@ -21,8 +21,9 @@ class CASSETTE:
         SDA = 0
         SCL = 1
         IRQ = 2
-        I2CBUS = SoftI2C(scl=Pin(SCL), sda=Pin(SDA))
+        I2CBUS = SoftI2C(scl=Pin(SCL), sda=Pin(SDA),freq=400000)
         self.power=AXP2101(I2CBUS, addr=0x34)
+        #self.battery_init()
         self.power_irq=Pin(2,Pin.IN,Pin.PULL_UP)
         self.power_irq.irq(handler=self.irq_reg,trigger=Pin.IRQ_FALLING)
         self.power.clearIrqStatus()
@@ -30,12 +31,15 @@ class CASSETTE:
         self.power.XPOWERS_AXP2101_PKEY_SHORT_IRQ | self.power.XPOWERS_AXP2101_PKEY_LONG_IRQ |  # POWER KEY
         self.power.XPOWERS_AXP2101_BAT_CHG_DONE_IRQ | self.power.XPOWERS_AXP2101_BAT_CHG_START_IRQ  # CHARGE
 )
+        self.power.setChargingLedMode(4)
+
         self.power.enableGauge()
+        #self.power.writeRegister(0x18,0x0f)
+
         self.power.enableGeneralAdcChannel()
         self.power.enableBattVoltageMeasure()
-        self.power.fuelGaugeControl(False,True)
-#         dd=self.power.getBatteryParameter()
-#         print(dd)
+        #self.power.fuelGaugeControl(False,True)
+        
         #screen
         self.screen=Screen()
         self.check_battery()
@@ -76,6 +80,45 @@ class CASSETTE:
         self.screen.bl_set(self.bl)
         self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         self.search_music()
+        
+    def battery_init(self):
+        init_data=[0x01,0xf5,0x00,0x30,0x1b,0xe2,0x28,0x0f,0x0c,0x1e,0x32,0x02,0x14,0x05,0x0a,0xfd,
+        0xd0,0xfb,0xc8,0x0d,0xa7,0x10,0x54,0xfb,0x46,0x01,0xea,0x15,0xcb,0x06,0x54,0x06,
+        0x07,0x0a,0xef,0x0f,0xa9,0x0f,0x50,0x0a,0x01,0x0e,0x7e,0x0e,0x65,0x04,0x4a,0x04,
+        0x33,0x09,0x1f,0x0e,0x05,0x0d,0xf8,0x08,0xde,0x0d,0xb7,0x0d,0x9d,0x03,0x76,0x03,
+        0x60,0x08,0x48,0x0d,0x0f,0x0c,0xb6,0x07,0x54,0x5b,0x2d,0x18,0x12,0x02,0x11,0x03,
+        0xc5,0x98,0x7e,0x66,0x4e,0x44,0x38,0x1a,0x12,0x0a,0xf6,0x00,0x00,0xf6,0x00,0xf6,
+        0x00,0xfb,0x00,0x00,0xfb,0x00,0x00,0xfb,0x00,0x00,0xf6,0x00,0x00,0xf6,0x00,0xf6,
+        0x00,0xfb,0x00,0x00,0xfb,0x00,0x00,0xfb,0x00,0x00,0xf6,0x00,0x00,0xf6,0x00,0xf6,
+        ]
+        #1
+        self.power.writeRegister(0x17,0x04)
+        self.power.writeRegister(0x17,0x00)
+        time.sleep_ms(50)
+        #2
+        self.power.writeRegister(0xa2,0x00)
+        self.power.writeRegister(0xa2,0x01)
+        time.sleep_ms(50)
+        #3
+        for b in init_data:
+            self.power.writeRegister(0xa1,b)
+            time.sleep_ms(1)
+#         #4
+#         self.power.writeRegister(0xa2,0x00)
+#         self.power.writeRegister(0xa2,0x01)
+#         #5
+#         for b in range(128):
+#             d=self.power.readRegister(0xa1)[0]
+        #6
+        self.power.writeRegister(0xa2,0x00)
+        time.sleep_ms(50)
+        #7
+        self.power.writeRegister(0xa2,0x10)
+        time.sleep_ms(50)
+        #8
+        self.power.writeRegister(0x17,0x04)
+        self.power.writeRegister(0x17,0x00)
+        
         
     def diskfree(self,d='/sd'):
         os.sync()
@@ -135,7 +178,8 @@ class CASSETTE:
         self.player.volume(self.volume) 
         while 1:
             await asyncio.sleep(1)
-            print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position)
+            #print(self.player.read_mp3(), self.player.decode_time(),self.player.seek_position,self.power.getBatteryPercent())
+            
             self.check_battery()
             if self.player.decode_time()!=0:
                 self.player._speed=int(self.player.seek_position/self.player.decode_time()/32/20)
@@ -231,23 +275,24 @@ class CASSETTE:
                     
         
     async def play(self,filename):
+        playname=filename
         self.player.volume(self.volume)
         self.player.response(bass_freq=150, bass_amp=self.bass,treble_amp=self.treble)
         re=self.get_cover()
         self.show_cover()
         if re==None:
             self.screen.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
-            if len(filename)<20:
-                self.screen.song_name(filename[4:-4])
-            else:
-                self.screen.song_name(filename[4:20])
-            
+            path_parts = filename.split("/")
+            mp3_filename_with_extension = path_parts[-1]
+            filename_parts = mp3_filename_with_extension.split(".")
+            filename = filename_parts[0]
+            self.screen.song_name(filename)
         try:
-            header=self.mp3_header(filename)
+            header=self.mp3_header(playname)
         except:
             header=0
         self.player.seek_position=0
-        with open(filename, 'rb') as f:
+        with open(playname, 'rb') as f:
             f.seek(header)
             try:
                 await self.player.play(f)
@@ -288,8 +333,7 @@ class CASSETTE:
             songs = self.list_mp3_files('/sd')
         except OSError:
             self.screen.error('SD未插入或损坏')
-        for s in songs:
-            print(s)
+        print(songs)
         self.song_list=songs
     
     def mp3_header(self,filename):
@@ -416,8 +460,9 @@ class CASSETTE:
             battery+=1
             if battery==10:
                 v=round(self.power.getSystemVoltage()/1000,2)
-                p=round(self.power.getBatteryPercent(),2)
+                p=self.power.getBatteryPercent()
                 vol=int(self.volume/3)+20
+                vol=self.power.getBattVoltage()
                 self.screen.tft.text(font, 'VOLT:'+str(v)+'v', 50, 90,white,gray)
                 self.screen.tft.text(font, 'PERCENT:'+str(p)+'%', 48, 105,white,gray)
                 self.screen.tft.text(font, 'VOLUME:'+str(vol), 48, 120,white,gray)
@@ -474,47 +519,70 @@ class CASSETTE:
         else:
             filename=self.song_list[self.song_num]
             self.screen.tft.jpg('img/fantasy.jpg',0,0,st7789.SLOW)
-            if len(filename)<20:
-                self.screen.song_name(filename[4:-4])
-            else:
-                self.screen.song_name(filename[4:20])
-            
+            path_parts = filename.split("/")
+            mp3_filename_with_extension = path_parts[-1]
+            filename_parts = mp3_filename_with_extension.split(".")
+            filename = filename_parts[0]
+            self.screen.song_name(filename)
+
     async def select_song(self):
+        menu=FILEMENU()
         play=False
+        playsong=None
         self.screen.ani=False
         self.screen.menu_items=[item[4:] for item in self.song_list]
         bg=st7789.color565(226,225,218)
         self.screen.tft.fill(bg)
-        self.screen.song_select()
+        self.screen.show_menu(menu.display())
         self.btcb=0
         while 1:
             if self.btcb==4:
-                break
+                menu.back()
+                menu.display()
+                re=menu.display()
+                if re==0:
+                    break
+                else:
+                    self.screen.show_menu(re)
             elif self.btcb==1:
-                self.screen.scroll_down()
+                menu.up()
+                menu.display()
+                self.screen.show_menu(menu.display())
             elif self.btcb==2:
-                self.screen.scroll_up()
+                menu.down()
+                menu.display()
+                self.screen.show_menu(menu.display())
             elif self.btcb==3:
-                print('play')
-                play=True
-                break    
+                playsong=menu.ok()
+                print(playsong)
+                if playsong!=None:
+                    play=True
+                    break 
+                else:
+                    self.screen.show_menu(menu.display())
             elif self.btcb==21:
                 while self.btcb!=31:
-                    self.screen.scroll_down()
-                    await asyncio.sleep_ms(100)
+                    menu.up()
+                    menu.display()
+                    self.screen.show_menu(menu.display())
+                    await asyncio.sleep_ms(50)
             elif self.btcb==22:
                 while self.btcb!=32:
-                    self.screen.scroll_up()
-                    await asyncio.sleep_ms(100)
+                    menu.down()
+                    menu.display()
+                    self.screen.show_menu(menu.display())
+                    await asyncio.sleep_ms(50)
             self.btcb=0
-            await asyncio.sleep_ms(50)
+            await asyncio.sleep_ms(10)
         self.btcb=0
         if play:
             self.player._pause=False
             await self.player.cancel()
             self.player.soft_reset()
-            self.song_num=self.screen.current_index+self.screen.select_index
-            asyncio.create_task(self.play(self.song_list[self.screen.current_index+self.screen.select_index]))        
+            index = self.song_list.index(playsong)
+            print(index)
+            self.song_num=index
+            asyncio.create_task(self.play(playsong))        
         self.show_cover()
         self.screen.ani=True
         self.check_battery(True)

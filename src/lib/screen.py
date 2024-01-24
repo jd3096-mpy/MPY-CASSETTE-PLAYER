@@ -158,40 +158,93 @@ class Screen:
             self.tft.blit_buffer(self.ch_buffer, 20,y,200,24)
             #self.tft.fill_rect(0, y, 40, 24, bg)
             
-    def song_select(self):
-        menu_list=[]
-        for i in range(self.current_index, min(self.current_index + self.items_per_page, len(self.menu_items))):
-            if i == self.current_index:
-                menu_list.append(self.menu_items[i])
-            else:
-                menu_list.append(self.menu_items[i])
-        self.fb_select(self.select_index==0,menu_list[0],5)
-        self.fb_select(self.select_index==1,menu_list[1],30)
-        self.fb_select(self.select_index==2,menu_list[2],55)
-        self.fb_select(self.select_index==3,menu_list[3],80)
-        self.fb_select(self.select_index==4,menu_list[4],105)
+    def show_menu(self,menu_data):
+        menu_list=menu_data[0]
+        cursor=menu_data[1]
+        title=menu_data[2]
+        print(menu_list)
+        self.fb_select(False,title,5)
+        self.fb_select(cursor==0,menu_list[0],30)
+        self.fb_select(cursor==1,menu_list[1],55)
+        self.fb_select(cursor==2,menu_list[2],80)
+        self.fb_select(cursor==3,menu_list[3],105)
+        
+import sdcard
+from machine import SPI, Pin
+import os
+import time
+import re
 
-    def scroll_up(self):
-        if self.select_index!=0:
-            self.select_index-=1
-        else:
-            if self.current_index > 0:
-                self.current_index -= 1
-                if self.current_index < self.current_index % self.items_per_page:
-                    self.current_index = self.current_index % self.items_per_page
-        self.song_select()
+class FILEMENU:
+    def __init__(self):
+        self.menu_num=4
+        self.root='/sd'
+        self.nowcwd='/sd'
+        self.nowlist=[]
+        self.nowlist=os.listdir(self.root)
+        self.nowmax=len(self.nowlist)
+        self.folder='sd'
+        self.cursor=0
+        self.num=0
+        self.display()
 
-    def scroll_down(self):
-        #print(self.current_index+self.select_index ,(len(self.menu_items) - 1))
-        if self.select_index!=self.items_per_page-1:
-            self.select_index+=1
+    def add_option(self, option, callback):
+        self.options[option] = callback
+
+    def display(self):
+        show_list = self.nowlist[self.num:self.num+4]
+        while len(show_list) < self.menu_num:
+            show_list.append('')
+        return show_list,self.cursor,self.nowcwd
+
+    def up(self):
+        if self.cursor!=0:
+            self.cursor-=1
         else:
-            if self.current_index+self.select_index < len(self.menu_items) - 1:
-                if self.current_index % self.items_per_page == self.items_per_page - 1:
-                    self.current_index += 1
-                else:
-                    self.current_index = min(self.current_index + 1, len(self.menu_items) - 1)
-        self.song_select()
+            if self.num!=0:
+                self.num-=1
+    
+    def down(self):
+        if self.cursor!=self.menu_num-1:
+            self.cursor+=1
+        else:
+            if self.num+self.menu_num<self.nowmax:
+                self.num+=1
+    
+    def ok(self):
+        filenum=self.num+self.cursor
+        now=self.nowcwd+'/'+self.nowlist[filenum]
+        if os.stat(now)[0] & 0o040000 != 0:  #is folder
+            self.nowcwd=now
+            self.nowlist=self.nowlist=os.listdir(self.nowcwd)
+            self.cursor=0
+            self.num=0
+            self.display()
+        else:
+            print('filemenu play')
+            return now
+        
+        
+    def back(self):
+        if self.nowcwd=='/sd' or self.nowcwd=='sd':
+            return 0
+        else:
+            print(self.nowcwd)
+            pattern = r'(.+?)/[^/]+$'
+            match = re.search(pattern, self.nowcwd)
+            result = match.group(1)
+            self.nowcwd=result
+            print(self.nowcwd)
+            self.nowlist=os.listdir(self.nowcwd)
+            self.cursor=0
+            self.num=0
+            
+        
+    
+
+
+
+
 
 
 
